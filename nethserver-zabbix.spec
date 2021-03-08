@@ -51,12 +51,12 @@ Zabbix client configuration
 %setup
 
 %build
-perl createlinks
+
 mkdir -p root/var/lib/nethserver/zabbix/backup
 mkdir -p client/%{_nseventsdir}/%{name}-client-update
 mkdir -p server/%{_nseventsdir}/%{name}-update
 
-for package in server client ; do
+for package in server client; do
     if [[ -f createlinks-${package} ]]; then
         # Hack around createlinks output dir prefix, hardcoded as "root/":
         rm -f root
