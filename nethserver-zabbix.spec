@@ -10,7 +10,10 @@ Group: Networking/Daemons
 Source: %{name}-%{version}.tar.gz
 BuildRoot: /var/tmp/%{name}-%{version}-%{release}-buildroot
 #Requires: zabbix-web-pgsql-scl
-Requires: nethserver-postgresql,zabbix-server-pgsql,zabbix-agent,zabbix-web,net-snmp-utils,nethserver-net-snmp,php-pgsql,nethserver-rh-php73-php-fpm
+Requires: nethserver-postgresql
+Requires: zabbix-server-pgsql
+Requires: zabbix-agent,zabbix-web,net-snmp-utils,php-pgsql
+Requires: nethserver-rh-php73-php-fpm,nethserver-net-snmp
 Requires: nmap
 Conflicts: nethserver-zabbix22
 BuildRequires: nethserver-devtools
@@ -18,6 +21,73 @@ BuildArch: noarch
 
 %description
 NethServer Zabbix configuration
+%files -f %{name}-%{version}-%{release}-filelist
+%defattr(-,root,root)
+%dir %{_nseventsdir}/%{name}-update
+%attr(0440,root,root) /etc/sudoers.d/50_nsapi_nethserver_zabbix
+%attr(0775,root,root) /usr/libexec/nethserver/api/%{name}/read
+%attr(0770,root,root) /usr/local/bin/zabbixUnicode.sh
+%attr(0770,root,root) /usr/local/bin/nethbackup_check
+%attr(0755,postgres,postgres) /var/lib/nethserver/zabbix/backup
+%doc COPYING
+
+
+%package client
+Summary: Zabbix client configuration
+Requires: %{name} >= %{version}-%{release}
+%description client
+Zabbix client configuration
+%files client -f client.lst
+%defattr(-,root,root)
+%doc COPYING
+%doc README.rst
+%dir %{_nseventsdir}/%{name}-client-update
+
+#%pre
+#getent passwd zabbix >/dev/null || useradd -m -d /var/lib/zabbix -s /bin/bash zabbix
+#exit 0
+
+%prep
+%setup
+
+%build
+perl createlinks
+mkdir -p root/var/lib/nethserver/zabbix/backup
+mkdir -p client/%{_nseventsdir}/%{name}-client-update
+mkdir -p server/%{_nseventsdir}/%{name}-update
+
+for package in server client ; do
+    if [[ -f createlinks-${package} ]]; then
+        # Hack around createlinks output dir prefix, hardcoded as "root/":
+        rm -f root
+        ln -sf ${package} root
+        perl createlinks-${package}
+    fi
+    ( cd ${package} ; %{makedocs} )
+    %{genfilelist} ${PWD}/${package} | \
+          grep -v -e '/etc/sudoers.d/' \
+          >> ${package}.lst
+    # !!! Do not create any file or directory after genfilelist invocation !!!
+done
+
+
+%install
+mkdir -p %{buildroot}/usr/share/cockpit/nethserver/applications/
+mkdir -p %{buildroot}/usr/libexec/nethserver/api/%{name}/
+mkdir -p %{buildroot}/usr/share/cockpit/%{name}/
+
+cp -a %{name}.json %{buildroot}/usr/share/cockpit/nethserver/applications/
+cp -a api/* %{buildroot}/usr/libexec/nethserver/api/%{name}/
+cp -a ui/* %{buildroot}/usr/share/cockpit/%{name}/
+
+
+for package in server client; do
+    (cd ${package}; find . -depth -print | cpio -dump %{buildroot})
+done
+
+%post
+
+%postun
 
 %changelog
 * Mon May 18 2020 Markus Neuberger <info@markusneuberger.at> - 0.0.1-8
@@ -46,47 +116,3 @@ NethServer Zabbix configuration
 * Mon Dec 04 2017 Markus Neuberger <info@markusneuberger.at> - 0.0.1-1
 - Initial NS7 release
 - Added conflicts nethserver-zabbix22
-
-#%pre
-#getent passwd zabbix >/dev/null || useradd -m -d /var/lib/zabbix -s /bin/bash zabbix
-#exit 0
-
-%prep
-%setup
-
-%build
-perl createlinks
-mkdir -p root/var/lib/nethserver/zabbix/backup
-
-%install
-rm -rf $RPM_BUILD_ROOT
-(cd root; find . -depth -print | cpio -dump $RPM_BUILD_ROOT)
-rm -f %{name}-%{version}-%{release}-filelist
-
-mkdir -p %{buildroot}/usr/share/cockpit/nethserver/applications/
-mkdir -p %{buildroot}/usr/libexec/nethserver/api/%{name}/
-mkdir -p %{buildroot}/usr/share/cockpit/%{name}/
-
-cp -a %{name}.json %{buildroot}/usr/share/cockpit/nethserver/applications/
-cp -a api/* %{buildroot}/usr/libexec/nethserver/api/%{name}/
-cp -a ui/* %{buildroot}/usr/share/cockpit/%{name}/
-
-%{genfilelist} $RPM_BUILD_ROOT \
-  --file /etc/sudoers.d/50_nsapi_nethserver_zabbix 'attr(0440,root,root)' \
-  --file /usr/libexec/nethserver/api/%{name}/read 'attr(775,root,root)' \
-  --file /usr/local/bin/zabbixUnicode.sh 'attr(770,root,root)' \
-  --file /usr/local/bin/nethbackup_check 'attr(770,root,root)' \
-  --dir /var/lib/nethserver/zabbix/backup 'attr(755,postgres,postgres)' \
-> %{name}-%{version}-%{release}-filelist
-exit 0
-
-%post
-%postun
-
-%clean
-rm -rf $RPM_BUILD_ROOT
-
-%files -f %{name}-%{version}-%{release}-filelist
-%defattr(-,root,root)
-%dir %{_nseventsdir}/%{name}-update
-%doc COPYING

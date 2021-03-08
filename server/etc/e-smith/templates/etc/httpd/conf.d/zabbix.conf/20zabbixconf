@@ -1,0 +1,64 @@
+#
+# Zabbix monitoring system php web frontend
+#
+
+Alias /zabbix /usr/share/zabbix
+
+<Directory "/usr/share/zabbix">
+    Options FollowSymLinks
+    AllowOverride None
+
+    <FilesMatch \.php$>
+      #SetHandler "proxy:fcgi://127.0.0.1:9003"
+      # Use socket for php
+      SetHandler "proxy:unix:/var/run/rh-php73-php-fpm/nethserver-zabbix-php73.sock|fcgi://localhost/"
+    </FilesMatch>
+
+    <IfModule mod_authz_core.c>
+      # Apache 2.4
+      Require all granted
+    </IfModule>
+   
+    <IfModule !mod_authz_core.c>
+      # Apache 2.2
+      Order allow,deny
+      Allow from all
+    </IfModule>
+
+    <IfModule mod_php5.c>
+        php_value max_execution_time 300
+        #php_value memory_limit 128M
+        php_value post_max_size 16M
+        #php_value upload_max_filesize 2M
+        php_value max_input_time 300
+        #php_value always_populate_raw_post_data -1
+        #php_value date.timezone Europe/Vienna
+    </IfModule>
+
+</Directory>
+
+<Directory ~ "^/usr/share/zabbix/(conf|api|include)/">
+    <IfModule mod_authz_core.c>
+      # Apache 2.4
+      Require all denied
+    </IfModule>
+
+    <IfModule !mod_authz_core.c>
+      # Apache 2.2
+      Order deny,allow
+      Deny from all
+    </IfModule>
+
+    <files *.php>
+      <IfModule mod_authz_core.c>
+        # Apache 2.4
+        Require all denied
+      </IfModule>
+
+      <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+      </IfModule>
+
+    </files>
+</Directory>

@@ -1,0 +1,21 @@
+#!/usr/bin/perl
+
+use strict;
+use esmith::Build::CreateLinks qw(:all);
+
+#--------------------------------------------------
+## example of what is a createlinks
+##--------------------------------------------------
+
+
+#mandatory to create db after installation
+my $event = 'nethserver-zabbix-client-update';
+event_actions ($event,
+     'initialize-default-databases' => '00',
+);
+
+templates2events("/etc/zabbix/zabbix_agentd.conf", $event);
+
+event_services($event,
+               'zabbix-agent' => 'restart'
+);
