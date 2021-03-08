@@ -21,7 +21,7 @@ BuildArch: noarch
 
 %description
 NethServer Zabbix configuration
-%files -f %{name}-%{version}-%{release}-filelist
+%files -f server.lst
 %defattr(-,root,root)
 %dir %{_nseventsdir}/%{name}-update
 %attr(0440,root,root) /etc/sudoers.d/50_nsapi_nethserver_zabbix
@@ -40,7 +40,6 @@ Zabbix client configuration
 %files client -f client.lst
 %defattr(-,root,root)
 %doc COPYING
-%doc README.rst
 %dir %{_nseventsdir}/%{name}-client-update
 
 #%pre
@@ -52,7 +51,7 @@ Zabbix client configuration
 
 %build
 
-mkdir -p root/var/lib/nethserver/zabbix/backup
+mkdir -p server/var/lib/nethserver/zabbix/backup
 mkdir -p client/%{_nseventsdir}/%{name}-client-update
 mkdir -p server/%{_nseventsdir}/%{name}-update
 
